@@ -232,7 +232,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
         exit(1);
         }
            
-    fprintf(stderr,"  Time %f Particles in %sTIPSY file: %d gas, %d dark, %d stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
+    fprintf(stderr,"  Time %g Particles in %sTIPSY file: %d gas, %d dark, %d stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
 //	fprintf(stderr,"%ld %ld %ld %ld\n",size,sizeof(gp)*hread.nsph,sizeof(dp)*hread.ndark,sizeof(sp)*hread.nstar);
 
     if (bProp) {
