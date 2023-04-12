@@ -3,8 +3,11 @@
    Utility for examining contents of tipsy binary files
    (c) 2012-2021 James Wadsley
 
-   Make:  gcc printtipsy.c -lm -o printtipsy
    Usage: printtipsy [[-av|-af] -a] [-p nprint (def 10)] [-i istart] [-e iend] [-n nth] [-gds] [-sphere x y z r] [-nc] [-prop] filename
+
+   Make:  gcc printtipsy.c -lm -o printtipsy
+   Note: May need tirpc to get xdr functions:
+   Make2: gcc -I/usr/include/tirpc printtipsy.c -ltirpc -lm -o printtipsy
 */
 #include <stdio.h>
 #include <stdlib.h>
