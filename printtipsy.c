@@ -1,7 +1,7 @@
 /* 
    printtipsy
    Utility for examining contents of tipsy binary files
-   (c) 2012-2021 James Wadsley
+   (c) 2012-2023 James Wadsley
 
    Usage: printtipsy [[-av|-af] -a] [-p nprint (def 10)] [-i istart] [-e iend] [-n nth] [-gds] [-sphere x y z r] [-nc] [-prop] filename
 
@@ -64,6 +64,8 @@ struct star_particle {
 
 struct star_particle *star_particles;
 
+/*
+Original tipsydefs.h
 struct dump {
     double time ;
     int nbodies ;
@@ -71,7 +73,17 @@ struct dump {
     int nsph ;
     int ndark ;
     int nstar ;
-    } ;
+    } ; */
+
+/* pkdgrav3 ( pad bytes required as well ) */
+struct dump {
+    double time ;
+    unsigned int nbodies ;
+    unsigned int ndim ;
+    unsigned int nsph ;
+    unsigned int ndark ;
+    unsigned int nstar ;
+} ;
 
 #define Real float
 
@@ -225,14 +237,44 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             exit(1);
             }
         }
-    else if (bCheck && size == 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
-        /* Read 4 byte pad */
-        assert(sizeof(int)==4);
-        fread(&i,4,1,fpread);
+    else if (bCheck && size == 28+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
+        /* Good data but No 4-byte pad in header */
         }
-    else if (bCheck && size != 28+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
-        fprintf(stderr,"File size nuts: %lld != %lld or %lld\n",(long long int) size,(long long int) (28+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar),(long long int) (32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar));
-        exit(1);
+    else {
+        unsigned int nPad;
+        uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
+        assert(sizeof(nPad)==4);
+        /* Read 4 byte pad */
+        fread(&nPad,4,1,fpread);
+        if (nPad != 0) {
+            uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
+            pkd3N = nPad & 0x000000ff;
+            pkd3N <<= 32;
+            pkd3N += hread.nbodies;
+            
+            pkd3Sph = nPad & 0x0000ff00;
+            pkd3Sph <<= 24;
+            pkd3Sph += hread.nsph;
+            
+            pkd3Dark = nPad & 0x00ff0000;
+            pkd3Dark <<= 16;
+            pkd3Dark += hread.ndark;
+            
+            pkd3Star = nPad & 0xff000000;
+            pkd3Star <<= 8;
+            pkd3Star += hread.nstar;
+
+            fprintf(stderr,"pdkgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
+            fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(gp)*pkd3Sph+sizeof(dp)*pkd3Dark+sizeof(sp)*pkd3Star) );
+            }
+
+        if (bCheck && size == 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
+            /* file size is consistent with standard native tipsy */
+            }
+        else {
+            fprintf(stderr,"File size nuts: %lld != %lld or %lld\n",(long long int) size,(long long int) (28+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar),(long long int) (32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar));
+            exit(1);
+            }
         }
            
     fprintf(stderr,"  Time %g Particles in %sTIPSY file: %d gas, %d dark, %d stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
@@ -440,8 +482,9 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
     }
 
 void usage() {
-    fprintf(stderr,"Usage: printtipsy [-af] [-av] [-a CSV] [-p nprint (def 10)] [-i istart] [-e iend] [-n nth] [-gds] [-sphere x y z r] [-nc] [-prop] filename\n");
-    fprintf(stderr,"       -a Try to open files with CSV list of added extensions, e.g. -a HI,HeI,HeII");
+    fprintf(stderr,"Usage: printtipsy [-v] [-af] [-av] [-a CSV] [-p nprint (def 10)] [-i istart] [-e iend] [-n nth] [-gds]\n"
+                   "       [-sphere x y z r] [-nc] [-prop] filename\n");
+    fprintf(stderr,"       -a Try to open files with CSV list of added extensions, e.g. -a HI,HeI,HeII\n");
     exit(1);
     }
 
