@@ -8,7 +8,7 @@
    will use time from file if exists if not specified
    will overwrite file header if file exists or creates just header in file otherwise
 
-   gcc -I/usr/include/tirpc tipsysussheader.c -ltirpc -lm -o tipsysussheader
+   gcc tipsysussheader.c -o tipsysussheader
 */
 
 #include <stdio.h>
