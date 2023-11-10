@@ -131,14 +131,14 @@ int nSph=-1,nDark=-1,nStar=-1,bReadAux=0;
 
 int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int iend, int bCheck, int bProp, int bAux, int iAuxFormat, int bSphere)
     {
-    int i,bStd=0;
+    int i,bStd=0,bSUSS=0;
     long offset;
     struct dump hfile;
     struct longdump hread;
     struct gas_particle gp;
     struct dark_particle dp;
     struct star_particle sp;
-    char stdtext[]="STD \0";
+    char stdtext[4][20]={ "\0", "STD \0", "SUSS\0", "SUSS STD\0" };
     XDR xdrread;
     FILE *fpread;
     struct stat fileinfo;
@@ -268,6 +268,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
         /* Read 4 byte pad */
         fread(&nPad,4,1,fpread);
         if (nPad != 0) {
+            bSUSS=1;
             uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
             pkd3N = nPad & 0x000000ff;
             pkd3N <<= 32;
@@ -290,8 +291,8 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             hread.ndark = pkd3Dark;
             hread.nstar = pkd3Star;
 
-            fprintf(stderr,"pkdgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
-            fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(gp)*pkd3Sph+sizeof(dp)*pkd3Dark+sizeof(sp)*pkd3Star) );
+            //fprintf(stderr,"pkdgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
+            //fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(gp)*pkd3Sph+sizeof(dp)*pkd3Dark+sizeof(sp)*pkd3Star) );
             }
 
         if (bCheck && size == 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
@@ -303,7 +304,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             }
         }
            
-    fprintf(stderr,"  Time %g Particles in %sTIPSY file: %ld gas, %ld dark, %ld stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
+    fprintf(stderr,"  Time %g,  %ld Particles in %sTIPSY file: %ld gas, %ld dark, %ld stars\n",hread.time,hread.nbodies,stdtext[bStd+(bSUSS ? 0:2)],hread.nsph,hread.ndark,hread.nstar);
 //	fprintf(stderr,"%ld %ld %ld %ld\n",size,sizeof(gp)*hread.nsph,sizeof(dp)*hread.ndark,sizeof(sp)*hread.nstar);
 
     if (bProp) {
