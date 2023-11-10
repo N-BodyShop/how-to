@@ -1,13 +1,13 @@
 /* 
-   printtipsy
+   arrayascii2bin
    Utility for examining contents of tipsy binary files
-   (c) 2012-2023 James Wadsley
+   (c) 2023 James Wadsley
 
-   Usage: arrayascii2bin filename
+   Usage: arrayascii2bin filename  (see below under usage())
 
    Make:  gcc arrayascii2bin.c -lm -o arrayascii2bin
    Note: May need tirpc to get xdr functions:
-   Make2: gcc -I/usr/include/tirpc printtipsy.c -ltirpc -lm -o printtipsy
+   Make2: gcc -I/usr/include/tirpc arrayascii2bin.c -ltirpc -lm -o arrayascii2bin
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -249,7 +249,14 @@ int ReadArray(char *file, char *filew, int bDark,int bGas,int bStar,int bReplace
     }
 
 void usage() {
-    fprintf(stderr,"Usage: arrayascii2binary [-gds]\n");
+    fprintf(stderr,"Usage: arrayascii2binary [-i] [-r replaceval] [-std] [-a] [-w filewrite] fileread\n"
+        "This utility converts between ascii, native and xdr format for auxilliary files.\n"
+        "fileread  input format auto detected except for float vs int\n"
+        "-i    read and write int\n"
+        "-r    replace contents with replaceval (will not read past header)\n"
+        "-std  xdr/standard format\n"
+        "-a    ascii/text format\n"
+        "-w    write to filewrite (default array.out)\n");
     exit(1);
     }
 
