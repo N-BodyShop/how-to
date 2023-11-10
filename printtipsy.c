@@ -138,7 +138,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
     struct gas_particle gp;
     struct dark_particle dp;
     struct star_particle sp;
-    char stdtext[4][20]={ "\0", "STD \0", "SUSS\0", "SUSS STD\0" };
+    char stdtext[4][20]={ "\0", "STD \0", "SUSS \0", "SUSS STD \0" };
     XDR xdrread;
     FILE *fpread;
     struct stat fileinfo;
@@ -304,7 +304,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             }
         }
            
-    fprintf(stderr,"  Time %g,  %ld Particles in %sTIPSY file: %ld gas, %ld dark, %ld stars\n",hread.time,hread.nbodies,stdtext[bStd+(bSUSS ? 0:2)],hread.nsph,hread.ndark,hread.nstar);
+    fprintf(stderr,"  Time %g,  %ld Particles in %sTIPSY file: %ld gas, %ld dark, %ld stars\n",hread.time,hread.nbodies,stdtext[bStd+(bSUSS ? 2:0)],hread.nsph,hread.ndark,hread.nstar);
 //	fprintf(stderr,"%ld %ld %ld %ld\n",size,sizeof(gp)*hread.nsph,sizeof(dp)*hread.ndark,sizeof(sp)*hread.nstar);
 
     if (bProp) {
