@@ -85,6 +85,24 @@ struct dump {
     unsigned int nstar ;
 } ;
 
+struct longdump {
+    double time ;
+    uint64_t nbodies ;
+    uint64_t ndim ;
+    uint64_t nsph ;
+    uint64_t ndark ;
+    uint64_t nstar ;
+} ;
+
+void set_hread(struct longdump *hread, struct dump *hfile) {
+    hread->time = hfile->time;
+    hread->nbodies = hfile->nbodies ;
+    hread->ndim = hfile->ndim ;
+    hread->nsph = hfile->nsph ;
+    hread->ndark = hfile->ndark ;
+    hread->nstar = hfile->nstar ;
+    }
+
 #define Real float
 
 int xdr_header(struct dump *header, XDR xdrlocal)
@@ -115,7 +133,8 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
     {
     int i,bStd=0;
     long offset;
-    struct dump hread;
+    struct dump hfile;
+    struct longdump hread;
     struct gas_particle gp;
     struct dark_particle dp;
     struct star_particle sp;
@@ -144,13 +163,15 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
         exit(1);
         }
 
-    fread(&hread,28,1,fpread);
+    fread(&hfile,28,1,fpread);
+    set_hread(&hread,&hfile);
     if (hread.ndim !=3) {
-        npartnat = *((int *) &hread);
+        npartnat = *((int *) &hfile);  // array file size is first
         bStd = 1;
         rewind(fpread);
         xdrstdio_create(&xdrread, fpread, XDR_DECODE);
-        xdr_header( &hread, xdrread );   
+        xdr_header( &hfile, xdrread );   
+        set_hread(&hread,&hfile);
         if (bCheck && size != 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
             int DataSize=sizeof(float);
             union { float f; int i; } Data;
@@ -264,7 +285,12 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             pkd3Star <<= 8;
             pkd3Star += hread.nstar;
 
-            fprintf(stderr,"pdkgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
+            hread.nbodies = pkd3N;
+            hread.nsph = pkd3Sph;
+            hread.ndark = pkd3Dark;
+            hread.nstar = pkd3Star;
+
+            fprintf(stderr,"pkdgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
             fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(gp)*pkd3Sph+sizeof(dp)*pkd3Dark+sizeof(sp)*pkd3Star) );
             }
 
@@ -277,7 +303,7 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             }
         }
            
-    fprintf(stderr,"  Time %g Particles in %sTIPSY file: %d gas, %d dark, %d stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
+    fprintf(stderr,"  Time %g Particles in %sTIPSY file: %ld gas, %ld dark, %ld stars\n",hread.time,stdtext+(bStd ? 0 : 4),hread.nsph,hread.ndark,hread.nstar);
 //	fprintf(stderr,"%ld %ld %ld %ld\n",size,sizeof(gp)*hread.nsph,sizeof(dp)*hread.ndark,sizeof(sp)*hread.nstar);
 
     if (bProp) {
