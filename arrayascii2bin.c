@@ -25,7 +25,6 @@
 
 typedef float Real;
 
-
 #define Real float
 
 int nSph=-1,nDark=-1,nStar=-1,bReadAux=0;
@@ -58,6 +57,9 @@ int ReadArray(char *file, char *filew, int bDark,int bGas,int bStar,int bReplace
         }
 
     fread(&npart,4,1,fpread);
+#ifdef VERBOSE    
+    fprintf(stderr,"TEST: %d Particles in Native Binary array file %s\n",npart,file);
+#endif    
     if (npart == (size-4)/4) {
         fprintf(stderr,"%d Particles in Native Binary array file %s\n",npart,file);
         iReadFormat=0;
@@ -66,6 +68,9 @@ int ReadArray(char *file, char *filew, int bDark,int bGas,int bStar,int bReplace
         rewind(fpread);
         xdrstdio_create(&xdrread, fpread, XDR_DECODE);
         xdr_int( &xdrread, &npart );
+#ifdef VERBOSE    
+        fprintf(stderr,"TEST: %d Particles in STD Binary array file %s\n",npart,file);
+#endif        
         if (npart == (size-4)/4) {
             fprintf(stderr,"%d Particles in STD Binary array file %s\n",npart,file);
             iReadFormat=1;
@@ -77,8 +82,8 @@ int ReadArray(char *file, char *filew, int bDark,int bGas,int bStar,int bReplace
                 exit(2);
             }
             rewind(fpread);
-            char readtest[nChar+1];
-            fscanf(fpread, "%20s", readtest);
+            unsigned char readtest[nChar+1];
+            fscanf(fpread, "%20c", readtest);
             int bNumber=0,nOK=0;
             // Check for whitespace or numbers in 1st chars
             for (i=0;i<nChar;i++) {
@@ -106,7 +111,13 @@ int ReadArray(char *file, char *filew, int bDark,int bGas,int bStar,int bReplace
                 case 69: // E
                     nOK++;
                     }
+#ifdef VERBOSE    
+                printf("%i %i ]%c[ %d %d\n",i,readtest[i],readtest[i],nOK,bNumber);
+#endif                
                 }
+#ifdef VERBOSE    
+            fprintf(stderr,"TEST: nOK %d bNumber %d\n",nOK,bNumber);
+#endif            
             if (nOK==nChar && bNumber) { // ascii text numbers
                 rewind(fpread);
                 fscanf(fpread, "%d", &npart);
@@ -244,7 +255,7 @@ void usage() {
 
 int main(int argc, char **argv) {
     int i,bGas=0,bDark=0,bStar=0;
-    char defaultw[]="arrayout", *filew=defaultw;
+    char defaultw[]="array.out", *filew=defaultw;
     char *pch, *file=NULL;
     float fReplace;
     int iReplace;
