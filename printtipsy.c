@@ -105,7 +105,7 @@ void set_hread(struct longdump *hread, struct dump *hfile) {
 
 #define Real float
 
-int xdr_header(struct dump *header, XDR xdrlocal)
+int xdr_header(struct dump *header, XDR xdrlocal, unsigned int *pnPad)
     {
     int pad;
   
@@ -121,10 +121,39 @@ int xdr_header(struct dump *header, XDR xdrlocal)
         return 0;
     if(xdr_int(&xdrlocal, &header->nstar) != TRUE)
         return 0;
-    if(xdr_int(&xdrlocal, &pad) != TRUE)
+    if(xdr_int(&xdrlocal, pnPad) != TRUE)
         return 0;
     return 1;
     }
+
+
+void TipsySussHeaderConvert( struct longdump *phread, unsigned int nPad, long long size ) {
+    uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
+    pkd3N = nPad & 0x000000ff;
+    pkd3N <<= 32;
+    pkd3N += phread->nbodies;
+    
+    pkd3Sph = nPad & 0x0000ff00;
+    pkd3Sph <<= 24;
+    pkd3Sph += phread->nsph;
+    
+    pkd3Dark = nPad & 0x00ff0000;
+    pkd3Dark <<= 16;
+    pkd3Dark += phread->ndark;
+    
+    pkd3Star = nPad & 0xff000000;
+    pkd3Star <<= 8;
+    pkd3Star += phread->nstar;
+    
+    phread->nbodies = pkd3N;
+    phread->nsph = pkd3Sph;
+    phread->ndark = pkd3Dark;
+    phread->nstar = pkd3Star;
+
+    // fprintf(stderr,"pkdgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
+    // fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(struct gas_particle)*pkd3Sph+sizeof(struct dark_particle)*pkd3Dark+sizeof(struct star_particle)*pkd3Star) );
+    }
+
 
 double xcom[3],v2com[3],vcom[3],L[3],mass;
 int nSph=-1,nDark=-1,nStar=-1,bReadAux=0;
@@ -166,16 +195,23 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
     fread(&hfile,28,1,fpread);
     set_hread(&hread,&hfile);
     if (hread.ndim !=3) {
+        unsigned int nPad;
         npartnat = *((int *) &hfile);  // array file size is first
         bStd = 1;
         rewind(fpread);
         xdrstdio_create(&xdrread, fpread, XDR_DECODE);
-        xdr_header( &hfile, xdrread );   
+        xdr_header( &hfile, xdrread, &nPad );   
         set_hread(&hread,&hfile);
+        if (size != 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) { // not standard header
+            if (nPad != 0) {
+                bSUSS=1;
+                TipsySussHeaderConvert( &hread, nPad, size );
+                }
+            }
         if (bCheck && size != 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
             int DataSize=sizeof(float);
             union { float f; int i; } Data;
-            // See if it isn't tipsy format but a tipsy array file
+            // See if it isn't ipsy format but a tipsy array file
             rewind(fpread);
             xdr_int( &xdrread, &npartstd );
             bStd=-1;
@@ -257,42 +293,18 @@ int PrintTipsy(char *file,int bDark,int bGas,int bStar,int nth,int istart,int ie
             fprintf(stderr,"Std file size nuts: %lld != %lld\n",(long long int)size,(long long int) (32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar));
             exit(1);
             }
-        }
+        } // end Std case
     else if (bCheck && size == 28+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
         /* Good data but No 4-byte pad in header */
         }
-    else {
+    else { // Check for extended header
         unsigned int nPad;
-        uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
         assert(sizeof(nPad)==4);
         /* Read 4 byte pad */
         fread(&nPad,4,1,fpread);
         if (nPad != 0) {
             bSUSS=1;
-            uint64_t pkd3N, pkd3Dark, pkd3Sph, pkd3Star;
-            pkd3N = nPad & 0x000000ff;
-            pkd3N <<= 32;
-            pkd3N += hread.nbodies;
-            
-            pkd3Sph = nPad & 0x0000ff00;
-            pkd3Sph <<= 24;
-            pkd3Sph += hread.nsph;
-            
-            pkd3Dark = nPad & 0x00ff0000;
-            pkd3Dark <<= 16;
-            pkd3Dark += hread.ndark;
-            
-            pkd3Star = nPad & 0xff000000;
-            pkd3Star <<= 8;
-            pkd3Star += hread.nstar;
-
-            hread.nbodies = pkd3N;
-            hread.nsph = pkd3Sph;
-            hread.ndark = pkd3Dark;
-            hread.nstar = pkd3Star;
-
-            //fprintf(stderr,"pkdgrav3 40 bit sizes?: %lu %lu %lu %lu\n",pkd3N,pkd3Sph,pkd3Dark,pkd3Star);
-            //fprintf(stderr,"File size ok?: %llu == %llu\n",(long long int) size,(long long int) (32+sizeof(gp)*pkd3Sph+sizeof(dp)*pkd3Dark+sizeof(sp)*pkd3Star) );
+            TipsySussHeaderConvert( &hread, nPad, size );
             }
 
         if (bCheck && size == 32+sizeof(gp)*hread.nsph+sizeof(dp)*hread.ndark+sizeof(sp)*hread.nstar) {
